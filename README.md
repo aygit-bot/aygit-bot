@@ -1,148 +1,102 @@
-# 🤖 Multi-Agent PR Review (Private Agent)
+# 🤖 Multi-Agent AI PR Reviewer
 
-Private repo'dan cross-repo PR review sistemi.
+AI-powered code review system using Google Gemini 2.5 Pro with 5 specialist agents.
 
----
+## ✨ Features
 
-## 🔄 Akış
+- 🎯 **5 Specialist AI Agents** - Each reviews from a different perspective
+- 💬 **Inline Code Comments** - Direct suggestions on specific lines
+- ✅ **Auto-Approve** - Automatically approves clean PRs
+- 🎉 **Emoji Reactions** - Visual feedback on PR quality
+- 📊 **Detailed Reports** - Severity-based issue tracking
 
-```
-┌─────────────────┐     trigger      ┌──────────────────┐
-│  PUBLIC REPO    │ ──────────────▶  │  PRIVATE REPO    │
-│  (Proje kodu)   │                  │  (Bu repo/Agent) │
-│                 │  ◀────────────── │                  │
-│  PR'a yorum     │     comment      │  6 AI Agent      │
-└─────────────────┘                  └──────────────────┘
-```
+## 🤖 AI Agents
 
----
+| Agent | Focus |
+|-------|-------|
+| 🎯 Product Owner | Requirements, user stories, acceptance criteria |
+| 👨‍💻 Senior Engineer | Code quality, design patterns, performance |
+| 🔒 Security Engineer | OWASP Top 10, input validation, secrets |
+| 🔧 DevOps Engineer | CI/CD, infrastructure, deployment |
+| 🧪 QA Engineer | Test coverage, edge cases, regression |
 
-## 🚀 Kurulum
+**Tech Lead** synthesizes all reviews and makes the final decision.
 
-### ADIM 1: GCP Service Account
+## 🚀 Quick Setup
+
+### 1. GCP Setup
 
 ```bash
-# Service Account oluştur
+# Create service account
 gcloud iam service-accounts create github-pr-reviewer \
-  --display-name="GitHub PR Reviewer" \
-  --project=YOUR_PROJECT_ID
+  --display-name="GitHub PR Reviewer"
 
-# Vertex AI User rolü ver
-gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
-  --member="serviceAccount:github-pr-reviewer@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+# Grant Vertex AI access
+gcloud projects add-iam-policy-binding YOUR_PROJECT \
+  --member="serviceAccount:github-pr-reviewer@YOUR_PROJECT.iam.gserviceaccount.com" \
   --role="roles/aiplatform.user"
 
-# JSON key oluştur
-gcloud iam service-accounts keys create github-sa-key.json \
-  --iam-account=github-pr-reviewer@YOUR_PROJECT_ID.iam.gserviceaccount.com
+# Create key
+gcloud iam service-accounts keys create key.json \
+  --iam-account=github-pr-reviewer@YOUR_PROJECT.iam.gserviceaccount.com
 
-# Vertex AI API aktif et
-gcloud services enable aiplatform.googleapis.com --project=YOUR_PROJECT_ID
+# Enable API
+gcloud services enable aiplatform.googleapis.com
 ```
 
-### ADIM 2: GitHub PAT Oluştur
+### 2. GitHub Secrets
 
-GitHub → Settings → Developer settings → Fine-grained tokens:
+Add these secrets to this repository:
 
-**Yetkileri:**
-- Repository access: Agent repo + Public repo seç
-- Actions: Read and write
-- Contents: Read  
-- Pull requests: Read and write
-
-### ADIM 3: Bu Repo'ya Secrets Ekle
-
-| Secret | Değer |
+| Secret | Value |
 |--------|-------|
-| `GCP_SA_KEY` | Service Account JSON (tamamı) |
-| `GCP_PROJECT_ID` | GCP proje ID |
-| `GH_PAT` | Oluşturduğun GitHub PAT |
+| `GCP_SA_KEY` | Contents of `key.json` |
+| `GCP_PROJECT_ID` | Your GCP project ID |
+| `GH_PAT` | GitHub PAT with repo/PR access |
 
-### ADIM 4: Public Repo'ya Workflow Ekle
+### 3. Trigger Review
 
-Public repo'da `.github/workflows/trigger-review.yml`:
+Go to **Actions** → **AI PR Review** → **Run workflow**
 
-```yaml
-name: Trigger AI Review
+Enter:
+- `target_repo`: `owner/repo-name`
+- `pr_number`: PR number to review
 
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+## 📋 Output Example
 
-jobs:
-  trigger:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger Agent Review
-        env:
-          GH_TOKEN: ${{ secrets.AGENT_PAT }}
-        run: |
-          gh workflow run pr-review.yml \
-            --repo YOUR_USERNAME/WBTS-Hackhathon \
-            --field target_repo=${{ github.repository }} \
-            --field pr_number=${{ github.event.pull_request.number }}
 ```
+🤖 Multi-Agent PR Review Summary
 
-### ADIM 5: Public Repo'ya Secret Ekle
-
-| Secret | Değer |
+| Metric | Value |
 |--------|-------|
-| `AGENT_PAT` | Aynı GitHub PAT |
+| Score | 8/10 |
+| Files Reviewed | 3 |
+| 🔴 Critical | 0 |
+| 🟠 High | 1 |
+| 🟡 Medium | 2 |
 
----
-
-## ✅ Test
-
-1. Public repo'da branch oluştur
-2. Değişiklik yap, commit, push
-3. PR aç
-4. Actions tab'larını izle:
-   - Public repo: `Trigger AI Review` çalışır
-   - Private repo: `AI PR Review` çalışır
-5. PR'da AI yorumunu gör
-
----
-
-## 🤖 6 AI Agent
-
-| Agent | Görev |
-|-------|-------|
-| 🎯 Product Owner | User story validation |
-| 👨‍💻 Senior Engineer | Code quality |
-| 🔒 Security Engineer | Security check |
-| 🔧 DevOps Engineer | CI/CD review |
-| 🧪 QA Engineer | Test coverage |
-| 🎖️ Tech Lead | Final decision |
-
----
-
-## 📁 Dosya Yapısı
-
-```
-WBTS-Hackhathon/           (Private)
-├── .github/workflows/
-│   └── pr-review.yml      # Dispatch ile tetiklenen workflow
-├── multi_agent_reviewer.py
-├── requirements.txt
-└── README.md
-
-your-public-repo/          (Public)
-├── .github/workflows/
-│   └── trigger-review.yml # PR'da agent'ı tetikler
-└── ... (proje dosyaları)
+👥 Specialist Votes
+| Agent | Score | Decision |
+|-------|-------|----------|
+| ProductOwner | 10/10 | ✅ APPROVE |
+| SeniorEngineer | 7/10 | ⚠️ REQUEST_CHANGES |
+| SecurityEngineer | 8/10 | 💬 COMMENT |
 ```
 
----
+## 🔧 Local Development
 
-## 🔍 Sorun Giderme
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
-| Hata | Çözüm |
-|------|-------|
-| `Workflow not found` | Private repo'da Actions aktif mi? |
-| `Resource not accessible` | PAT yetkileri doğru mu? |
-| `Permission denied` | GCP Service Account'a rol verildi mi? |
+# Set environment variables
+export GCP_PROJECT_ID=your-project
+export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxx
+export GOOGLE_APPLICATION_CREDENTIALS=key.json
 
----
+# Run
+python multi_agent_reviewer.py
+```
 
 ## 📄 License
 
